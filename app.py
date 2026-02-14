@@ -87,12 +87,13 @@ if uploaded_file:
                 )
                 
                 # Cant a Comp. (AF)
+                # Fórmula: SI(Stock Máximo <> 0; SI(Porcentual <= 10%; Stock Máximo - Stock Total V-NV; "No Comp"); "NA")
                 def calcular_cant_comp(row):
                     if pd.isna(row['Stock Máximo']) or row['Stock Máximo'] == 0:
                         return "NA"
-                    porcentaje = (row['Stock Real'] / row['Stock Máximo']) * 100
-                    if porcentaje <= 10:
-                        return row['Stock Máximo'] - row['Stock Real']
+                    porcentual = row['Porcentual']
+                    if porcentual <= 10:
+                        return row['Stock Máximo'] - row['Stock Total (V-NV)']
                     else:
                         return "No Comp"
                 
