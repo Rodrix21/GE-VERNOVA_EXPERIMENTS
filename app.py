@@ -77,9 +77,12 @@ if uploaded_file:
                 df['Stock Total (V-NV)'] = df['Stock Real']
                 
                 # Porcentual (AD)
+                # Fórmula: (Stock Total V-NV - Stock Mínimo) / (Stock Máximo - Stock Mínimo) * 100
                 df['Porcentual'] = df.apply(
-                    lambda row: (row['Stock Real'] / row['Stock Máximo'] * 100) 
-                    if pd.notna(row['Stock Máximo']) and row['Stock Máximo'] > 0 else 0,
+                    lambda row: ((row['Stock Total (V-NV)'] - row['Stock Mínimo']) / 
+                                 (row['Stock Máximo'] - row['Stock Mínimo']) * 100)
+                    if (pd.notna(row['Stock Máximo']) and pd.notna(row['Stock Mínimo']) and 
+                        row['Stock Máximo'] != row['Stock Mínimo']) else 0,
                     axis=1
                 )
                 
