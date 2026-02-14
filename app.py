@@ -45,6 +45,22 @@ if uploaded_file:
     
     st.info(f"📋 Registros cargados - ZMM009: {len(zm009)} | MB51: {len(mb51)} | SC: {len(sc)}")
     
+    # Mostrar vista previa de datos
+    with st.expander("👁️ Ver vista previa de las bases de datos"):
+        tab1, tab2, tab3 = st.tabs(["ZMM009", "MB51", "SC"])
+        
+        with tab1:
+            st.write(f"**Total registros:** {len(zm009)}")
+            st.dataframe(zm009.head(20))
+        
+        with tab2:
+            st.write(f"**Total registros:** {len(mb51)}")
+            st.dataframe(mb51.head(20))
+        
+        with tab3:
+            st.write(f"**Total registros:** {len(sc)}")
+            st.dataframe(sc.head(20))
+    
     # Selector de área
     area_seleccionada = st.selectbox("Selecciona el Área Solicitante:", AREAS)
     
@@ -94,8 +110,15 @@ if uploaded_file:
                 
                 df['Cant a Comp.'] = df.apply(calcular_cant_comp, axis=1)
                 
+                # DIAGNÓSTICO: Mostrar distribución antes de filtrar
+                st.write("**Diagnóstico - Distribución de 'Cant a Comp.':**")
+                diagnostico = df['Cant a Comp.'].value_counts()
+                st.write(diagnostico)
+                
                 # Filtrar NA y No Comp
                 df_filtrado = df[~df['Cant a Comp.'].isin(['NA', 'No Comp'])].copy()
+                
+                st.write(f"### Después de filtrar NA y No Comp: {len(df_filtrado)} materiales")
                 
                 # Solicitud Pedido (columna AK)
                 df_filtrado['Solicitud Pedido'] = df_filtrado['Material'].apply(
@@ -306,4 +329,3 @@ if uploaded_file:
                         file_name=f'analisis_abc_{area_seleccionada}.csv',
                         mime='text/csv'
                     )
-
