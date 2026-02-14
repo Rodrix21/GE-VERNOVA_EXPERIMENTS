@@ -203,22 +203,62 @@ if uploaded_file:
                 
                 df['Zona'] = df['% De Mov. Acumulado'].apply(clasificar_zona)
                 
-                # % Porcentaje (BI)
-                # Para cada zona, obtener el último valor de % De Mov. Acumulado
-                df['% Porcentaje'] = ""
+                # ============================================
+                # APLICAR FILTROS FINALES
+                # ============================================
                 
-                for zona in ['A', 'B', 'C']:
-                    df_zona = df[df['Zona'] == zona]
-                    if len(df_zona) > 0:
-                        ultimo_idx = df_zona.index[-1]
-                        if zona == 'A':
-                            df.loc[ultimo_idx, '% Porcentaje'] = df.loc[ultimo_idx, '% De Mov. Acumulado']
-                        elif zona == 'B':
-                            max_a = df[df['Zona'] == 'A']['% De Mov. Acumulado'].max() if len(df[df['Zona'] == 'A']) > 0 else 0
-                            df.loc[ultimo_idx, '% Porcentaje'] = df.loc[ultimo_idx, '% De Mov. Acumulado'] - max_a
-                        elif zona == 'C':
-                            max_b = df[df['Zona'] == 'B']['% De Mov. Acumulado'].max() if len(df[df['Zona'] == 'B']) > 0 else 0
-                            df.loc[ultimo_idx, '% Porcentaje'] = df.loc[ultimo_idx, '% De Mov. Acumulado'] - max_b
+                st.write(f"**Total materiales antes de filtros finales:** {len(df)}")
+                
+                # Filtro 1: Excluir "NA" y "No Comp" de Cant a Comp.
+                df_filtrado = df[~df['Cant a Comp.'].isin(['NA', 'No Comp'])].copy()
+                st.write(f"**Después de filtrar Cant a Comp. (solo números):** {len(df_filtrado)}")
+                
+                # Filtro 2: Solo materiales SIN solicitud (Solicitud Pedido vacío)
+                df_filtrado = df_filtrado[df_filtrado['Solicitud Pedido'] == ""].copy()
+                st.write(f"**Después de filtrar Solicitud Pedido (solo vacíos):** {len(df_filtrado)}")
+                
+                if len(df_filtrado) == 0:
+                    st.warning("⚠️ No hay materiales que cumplan los criterios finales (Cant a Comp. con valor numérico y sin Solicitud Pedido).")
+                else:
+                    # RECALCULAR análisis ABC solo con datos filtrados
+                    df_filtrado = df_filtrado.sort_values('Cant. Mov.', ascending=False).reset_index(drop=True)
+                    
+                    # Mov. Acumulado
+                    df_filtrado['Mov. Acumulado'] = df_filtrado['Cant. Mov.'].cumsum()
+                    
+                    # % De Mov. Acumulado
+                    total_mov_filtrado = df_filtrado['Cant. Mov.'].sum()
+                    df_filtrado['% De Mov. Acumulado'] = (df_filtrado['Mov. Acumulado'] / total_mov_filtrado * 100) if total_mov_filtrado > 0 else 0
+                    
+                    # Zona
+                    def clasificar_zona(porcentaje):
+                        if porcentaje < 80:
+                            return 'A'
+                        elif porcentaje < 95:
+                            return 'B'
+                        else:
+                            return 'C'
+                    
+                    df_filtrado['Zona'] = df_filtrado['% De Mov. Acumulado'].apply(clasificar_zona)
+                    
+                    # % Porcentaje (BI)
+                    df_filtrado['% Porcentaje'] = ""
+                    
+                    for zona in ['A', 'B', 'C']:
+                        df_zona = df_filtrado[df_filtrado['Zona'] == zona]
+                        if len(df_zona) > 0:
+                            ultimo_idx = df_zona.index[-1]
+                            if zona == 'A':
+                                df_filtrado.loc[ultimo_idx, '% Porcentaje'] = df_filtrado.loc[ultimo_idx, '% De Mov. Acumulado']
+                            elif zona == 'B':
+                                max_a = df_filtrado[df_filtrado['Zona'] == 'A']['% De Mov. Acumulado'].max() if len(df_filtrado[df_filtrado['Zona'] == 'A']) > 0 else 0
+                                df_filtrado.loc[ultimo_idx, '% Porcentaje'] = df_filtrado.loc[ultimo_idx, '% De Mov. Acumulado'] - max_a
+                            elif zona == 'C':
+                                max_b = df_filtrado[df_filtrado['Zona'] == 'B']['% De Mov. Acumulado'].max() if len(df_filtrado[df_filtrado['Zona'] == 'B']) > 0 else 0
+                                df_filtrado.loc[ultimo_idx, '% Porcentaje'] = df_filtrado.loc[ultimo_idx, '% De Mov. Acumulado'] - max_b
+                    
+                    # Usar df_filtrado para el resto del análisis
+                    df = df_filtrado.copy()
                 
                 # ============================================
                 # MOSTRAR TABLA PRINCIPAL DEL PROCESO
