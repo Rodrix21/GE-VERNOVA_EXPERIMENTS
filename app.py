@@ -5,7 +5,20 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 st.set_page_config(page_title="Análisis ABC Repuestos", layout="wide")
-st.title("📊 Análisis ABC de Repuestos - SAP")
+
+# Header con logo
+col_logo, col_titulo = st.columns([1, 4])
+
+with col_logo:
+    # Cargar logo (debe estar en la misma carpeta que app.py)
+    try:
+        st.image("GE_VERNOVA.png", width=200)
+    except:
+        pass  # Si no encuentra el logo, continúa sin error
+
+with col_titulo:
+    st.title("📊 Análisis ABC de Repuestos - SAP")
+    st.markdown("**Elaborado por el área de Logística**")
 
 # Subir archivo
 uploaded_file = st.file_uploader("Sube tu archivo Excel de SAP", type=['xlsx'])
@@ -74,7 +87,25 @@ if uploaded_file:
                 # ============================================
                 
                 # Stock Total (V-NV) (Z)
-                df['Stock Total (V-NV)'] = df['Stock Real']
+                # Fórmula Excel: SI(B<>""; SUMAR.SI.CONJUNTO(ZMM009_StockReal; ZMM009_Eng; B; ZMM009_Alm; U);
+                #                         SUMAR.SI.CONJUNTO(ZMM009_StockReal; ZMM009_Cod; A; ZMM009_Alm; U))
+                def calcular_stock_total_vnv(row):
+                    almacen = row['Almacén']
+                    
+                    # Si tiene Nº material ant., buscar por ese
+                    if pd.notna(row['Nºmaterial ant.']):
+                        return zm009[
+                            (zm009['Nºmaterial ant.'] == row['Nºmaterial ant.']) &
+                            (zm009['Almacén'] == almacen)
+                        ]['Stock Real'].sum()
+                    # Si no, buscar por Material
+                    else:
+                        return zm009[
+                            (zm009['Material'] == row['Material']) &
+                            (zm009['Almacén'] == almacen)
+                        ]['Stock Real'].sum()
+                
+                df['Stock Total (V-NV)'] = df.apply(calcular_stock_total_vnv, axis=1)
                 
                 # Porcentual (AD)
                 # Fórmula: (Stock Total V-NV - Stock Mínimo) / (Stock Máximo - Stock Mínimo) * 100
