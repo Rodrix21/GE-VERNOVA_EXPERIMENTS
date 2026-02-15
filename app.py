@@ -5,28 +5,23 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 st.set_page_config(page_title="Análisis ABC Repuestos", layout="wide")
-
-# Header con logo
 col_logo, col_titulo = st.columns([1, 4])
 
 with col_logo:
-    # Cargar logo (debe estar en la misma carpeta que app.py)
     try:
-        st.image("GE_VERNOVA.png", width=200)
+        st.image("GE_VERNOVA.png", width=500)
     except:
-        pass  # Si no encuentra el logo, continúa sin error
+        pass  
 
 with col_titulo:
     st.title("📊 Análisis ABC de Repuestos - SAP")
     st.markdown("**Elaborado por el área de Logística**")
 
-# Subir archivo
 uploaded_file = st.file_uploader("Sube tu archivo Excel de SAP", type=['xlsx'])
 
 if uploaded_file:
-    st.success("✅ Archivo cargado correctamente!")
+    st.success("✅ Archivo cargado ")
     
-    # Leer las hojas
     with st.spinner("Cargando datos..."):
         zm009 = pd.read_excel(uploaded_file, sheet_name='ZMM009')
         mb51 = pd.read_excel(uploaded_file, sheet_name='MB51')
@@ -34,8 +29,7 @@ if uploaded_file:
     
     st.info(f"📋 Registros cargados - ZMM009: {len(zm009)} | MB51: {len(mb51)} | SC: {len(sc)}")
     
-    # Mostrar vista previa de datos
-    with st.expander("👁️ Ver vista previa de las bases de datos"):
+    with st.expander("👁️ Vista previa"):
         tab1, tab2, tab3 = st.tabs(["ZMM009", "MB51", "SC"])
         
         with tab1:
@@ -50,7 +44,6 @@ if uploaded_file:
             st.write(f"**Total registros:** {len(sc)}")
             st.dataframe(sc.head(20))
     
-    # FILTROS DINÁMICOS
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -62,15 +55,13 @@ if uploaded_file:
         tipo_material_sel = st.selectbox("Tipo Material:", opciones_tipo_material)
     
     with col3:
-        # Filtrar áreas según quien compra seleccionado
         zm009_filtrado_temp = zm009[zm009['Quien Compra'] == quien_compra_sel]
         opciones_areas = sorted(zm009_filtrado_temp['Area Solicitantes'].dropna().unique().tolist())
         area_seleccionada = st.selectbox("Área Solicitante:", opciones_areas)
     
-    if st.button("🔄 Procesar Datos", type="primary"):
-        with st.spinner("Aplicando filtros y calculando valores..."):
+    if st.button("Procesar Datos", type="primary"):
+        with st.spinner("Aplicando filtros y calculando valores, espere..."):
             
-            # APLICAR FILTROS INICIALES
             df = zm009.copy()
             df = df[df['Quien Compra'] == quien_compra_sel]
             df = df[df['Tipo material'] == tipo_material_sel]
@@ -82,23 +73,17 @@ if uploaded_file:
             if len(df) == 0:
                 st.warning("⚠️ No se encontraron materiales con los filtros aplicados.")
             else:
-                # ============================================
-                # CALCULAR COLUMNAS BÁSICAS
-                # ============================================
                 
-                # Stock Total (V-NV) (Z)
-                # Fórmula Excel: SI(B<>""; SUMAR.SI.CONJUNTO(ZMM009_StockReal; ZMM009_Eng; B; ZMM009_Alm; U);
-                #                         SUMAR.SI.CONJUNTO(ZMM009_StockReal; ZMM009_Cod; A; ZMM009_Alm; U))
+# Calculando columnas básicas
+                
                 def calcular_stock_total_vnv(row):
                     almacen = row['Almacén']
                     
-                    # Si tiene Nº material ant., buscar por ese
                     if pd.notna(row['Nºmaterial ant.']):
                         return zm009[
                             (zm009['Nºmaterial ant.'] == row['Nºmaterial ant.']) &
                             (zm009['Almacén'] == almacen)
                         ]['Stock Real'].sum()
-                    # Si no, buscar por Material
                     else:
                         return zm009[
                             (zm009['Material'] == row['Material']) &
@@ -107,8 +92,8 @@ if uploaded_file:
                 
                 df['Stock Total (V-NV)'] = df.apply(calcular_stock_total_vnv, axis=1)
                 
-                # Porcentual (AD)
-                # Fórmula: (Stock Total V-NV - Stock Mínimo) / (Stock Máximo - Stock Mínimo) * 100
+# Porcentual (AD)
+# Fórmula: (Stock Total V-NV - Stock Mínimo) / (Stock Máximo - Stock Mínimo) * 100
                 df['Porcentual'] = df.apply(
                     lambda row: ((row['Stock Total (V-NV)'] - row['Stock Mínimo']) / 
                                  (row['Stock Máximo'] - row['Stock Mínimo']) * 100)
@@ -117,8 +102,8 @@ if uploaded_file:
                     axis=1
                 )
                 
-                # Cant a Comp. (AF)
-                # Fórmula: SI(Stock Máximo <> 0; SI(Porcentual <= 10%; Stock Máximo - Stock Total V-NV; "No Comp"); "NA")
+# Cant a Comp. (AF)
+# Fórmula: SI(Stock Máximo <> 0; SI(Porcentual <= 10%; Stock Máximo - Stock Total V-NV; "No Comp"); "NA")
                 def calcular_cant_comp(row):
                     if pd.isna(row['Stock Máximo']) or row['Stock Máximo'] == 0:
                         return "NA"
@@ -130,48 +115,47 @@ if uploaded_file:
                 
                 df['Cant a Comp.'] = df.apply(calcular_cant_comp, axis=1)
                 
-                # FILTRO 1: Excluir "NA" y "No Comp"
+# Excluimos "NA" y "No Comp"
                 df = df[~df['Cant a Comp.'].isin(['NA', 'No Comp'])].copy()
                 st.write(f"**Después de filtrar Cant a Comp. (solo números):** {len(df)}")
                 
                 if len(df) == 0:
                     st.warning("⚠️ No hay materiales con cantidad a comprar numérica.")
                 else:
-                    # Solicitud Pedido (AK)
+# Solicitud Pedido (AK)
                     df['Solicitud Pedido'] = df['Material'].apply(
                         lambda x: sc[sc['Cod. SAP'] == x]['Solicitud \nPedido'].values[0] 
                         if len(sc[sc['Cod. SAP'] == x]) > 0 else ""
                     )
                     
-                    # FILTRO 2: Solo vacíos (sin solicitud previa)
+# Solo vacíos (Que no tengan solicitud de pedido)
                     df = df[df['Solicitud Pedido'] == ""].copy()
                     st.write(f"**Después de filtrar Solicitud Pedido (solo vacíos):** {len(df)}")
                     
                     if len(df) == 0:
                         st.warning("⚠️ Todos los materiales ya tienen solicitud/pedido previo.")
                     else:
-                        # ============================================
-                        # CALCULAR COLUMNAS DE MOVIMIENTOS
-                        # ============================================
                         
-                        # Cant. Ingreso (AP)
+# Calcular columnas de movimientos
+                        
+# Cant. Ingreso (AP)
                         df['Cant. Ingreso'] = df['Material'].apply(
                             lambda x: len(mb51[(mb51['Material'] == x) & (mb51['Indicador Debe/Haber'] == 'S')])
                         )
                         
-                        # Cant Salida (AQ)
+# Cant Salida (AQ)
                         df['Cant Salida'] = df['Material'].apply(
                             lambda x: len(mb51[(mb51['Material'] == x) & (mb51['Indicador Debe/Haber'] == 'H')])
                         )
                         
-                        # Ingreso y Salida (AR)
+# Ingreso y Salida (AR)
                         df['Ingreso y Salida'] = df['Material'].apply(
                             lambda x: len(mb51[mb51['Material'] == x])
                         )
                         
-                        # Ingresos y Salidas por año (2022-2026)
+# Ingresos y Salidas por año (2022 - hasta que el cuerpo aguante)
                         for year in [2022, 2023, 2024, 2025, 2026]:
-                            # Ingreso
+# Ingreso
                             df[f'Ingreso {year}'] = df.apply(
                                 lambda row: mb51[
                                     (mb51['Material'] == row['Material']) &
@@ -182,7 +166,7 @@ if uploaded_file:
                                 axis=1
                             )
                             
-                            # Salida
+# Salida
                             df[f'Salida {year}'] = df.apply(
                                 lambda row: mb51[
                                     (mb51['Material'] == row['Material']) &
@@ -193,7 +177,7 @@ if uploaded_file:
                                 axis=1
                             )
                         
-                        # Cant. Ingreso (501/561) (BA)
+# Cant. Ingreso (501/561) (BA)
                         df['Cant. Ingreso. (501/561)'] = df.apply(
                             lambda row: mb51[
                                 (mb51['Material'] == row['Material']) &
@@ -203,7 +187,7 @@ if uploaded_file:
                             axis=1
                         )
                         
-                        # Cant. Salida. (BB)
+# Cant. Salida. (BB)
                         df['Cant. Salida.'] = df.apply(
                             lambda row: mb51[
                                 (mb51['Material'] == row['Material']) &
@@ -213,34 +197,31 @@ if uploaded_file:
                             axis=1
                         )
                         
-                        # Cant. Reg. Ingreso (BC)
+# Cant. Reg. Ingreso (BC)
                         df['Cant. Reg. Ingreso'] = df['Material'].apply(
                             lambda x: len(mb51[(mb51['Material'] == x) & (mb51['Indicador Debe/Haber'] == 'S')])
                         )
                         
-                        # Cant. Reg. Salida (BD)
+# Cant. Reg. Salida (BD)
                         df['Cant. Reg. Salida'] = df['Material'].apply(
                             lambda x: len(mb51[(mb51['Material'] == x) & (mb51['Indicador Debe/Haber'] == 'H')])
                         )
                         
-                        # Cant. Mov. (BE)
+ # Cant. Mov. (BE)
                         df['Cant. Mov.'] = df['Cant. Reg. Ingreso'] + df['Cant. Reg. Salida']
                         
-                        # ============================================
-                        # ANÁLISIS ABC
-                        # ============================================
-                        
-                        # Ordenar por Cant. Mov. descendente
+# Análisis ABC de los materiales                    
+# Ordenar por Cant. Mov. descendente
                         df = df.sort_values('Cant. Mov.', ascending=False).reset_index(drop=True)
                         
-                        # Mov. Acumulado (BF)
+# Mov. Acumulado (BF)
                         df['Mov. Acumulado'] = df['Cant. Mov.'].cumsum()
                         
-                        # % De Mov. Acumulado (BG)
+# % De Mov. Acumulado (BG)
                         total_mov = df['Cant. Mov.'].sum()
                         df['% De Mov. Acumulado'] = (df['Mov. Acumulado'] / total_mov * 100) if total_mov > 0 else 0
                         
-                        # Zona (BH)
+# Zona (BH)
                         def clasificar_zona(porcentaje):
                             if porcentaje < 80:
                                 return 'A'
@@ -251,7 +232,7 @@ if uploaded_file:
                         
                         df['Zona'] = df['% De Mov. Acumulado'].apply(clasificar_zona)
                         
-                        # % Porcentaje (BI)
+# % Porcentaje (BI)
                         df['% Porcentaje'] = ""
                         
                         for zona in ['A', 'B', 'C']:
@@ -266,11 +247,8 @@ if uploaded_file:
                                 elif zona == 'C':
                                     max_b = df[df['Zona'] == 'B']['% De Mov. Acumulado'].max() if len(df[df['Zona'] == 'B']) > 0 else 0
                                     df.loc[ultimo_idx, '% Porcentaje'] = df.loc[ultimo_idx, '% De Mov. Acumulado'] - max_b
-                        
-                        # ============================================
-                        # MOSTRAR TABLA PRINCIPAL
-                        # ============================================
-                        
+            
+# Mostrar la tabla principal                        
                         st.write("---")
                         st.subheader("📋 Tabla Principal - Proceso Completo")
                         
@@ -292,10 +270,7 @@ if uploaded_file:
                         
                         st.dataframe(df[columnas_proceso], use_container_width=True, height=500)
                         
-                        # ============================================
-                        # CUADRO RESUMEN ABC
-                        # ============================================
-                        
+# Cuadro de resumen ABC                        
                         st.write("---")
                         st.subheader("📊 Cuadro Resumen - Análisis ABC")
                         
@@ -306,7 +281,7 @@ if uploaded_file:
                         
                         resumen.columns = ['Zona', 'Nro de Materiales', 'Total Movimientos']
                         
-                        # Calcular porcentajes
+# Calcular porcentajes
                         total_materiales = resumen['Nro de Materiales'].sum()
                         total_movimientos = resumen['Total Movimientos'].sum()
                         
@@ -315,19 +290,17 @@ if uploaded_file:
                         resumen['% Movimiento'] = (resumen['Total Movimientos'] / total_movimientos * 100).round(2)
                         resumen['% de Movimiento acumulado'] = resumen['% Movimiento'].cumsum().round(2)
                         
-                        # Ordenar por zona A, B, C
+# Ordenando por zona A, B, C
                         resumen['Zona'] = pd.Categorical(resumen['Zona'], categories=['A', 'B', 'C'], ordered=True)
                         resumen = resumen.sort_values('Zona')
                         
-                        # Mostrar solo columnas solicitadas
+# Mostrando solo columnas solicitadas
                         resumen_final = resumen[['Zona', 'Nro de Materiales', '% de Materiales', 
                                                   '% Acumulado', '% Movimiento', '% de Movimiento acumulado']]
                         
                         st.dataframe(resumen_final, use_container_width=True, hide_index=True)
                         
-                        # ============================================
-                        # GRÁFICO ABC
-                        # ============================================
+# Gráfico ABC (generado)
                         
                         st.write("---")
                         st.subheader("📈 Gráfico Análisis ABC")
@@ -336,8 +309,6 @@ if uploaded_file:
                         
                         colores = {'A': 'green', 'B': 'gold', 'C': 'red'}
                         colores_mapeados = resumen['Zona'].map(colores)
-                        
-                        # Barras: % Movimiento
                         fig.add_trace(
                             go.Bar(
                                 x=resumen['Zona'],
@@ -350,7 +321,7 @@ if uploaded_file:
                             secondary_y=False
                         )
                         
-                        # Línea: % Movimiento Acumulado
+# Línea para % Movimiento Acumulado
                         fig.add_trace(
                             go.Scatter(
                                 x=resumen['Zona'],
@@ -378,9 +349,7 @@ if uploaded_file:
                         
                         st.plotly_chart(fig, use_container_width=True)
                         
-                        # ============================================
-                        # DESCARGAR DATOS
-                        # ============================================
+# Opción de descargar
                         
                         st.write("---")
                         st.download_button(
@@ -389,3 +358,4 @@ if uploaded_file:
                             file_name=f'analisis_abc_{area_seleccionada}.csv',
                             mime='text/csv'
                         )
+
