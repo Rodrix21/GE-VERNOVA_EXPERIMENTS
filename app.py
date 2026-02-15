@@ -316,7 +316,7 @@ if uploaded_file:
                                 name='% Movimiento',
                                 marker_color=colores_mapeados,
                                 text=resumen['% Movimiento'].apply(lambda x: f'{x:.1f}%'),
-                                textposition='inside'
+                                textposition='auto'
                             ),
                             secondary_y=False
                         )
@@ -358,6 +358,7 @@ if uploaded_file:
                             file_name=f'analisis_abc_{area_seleccionada}.csv',
                             mime='text/csv'
                         )
+
 
 
 
