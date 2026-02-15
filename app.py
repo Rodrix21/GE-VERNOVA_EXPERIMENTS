@@ -316,7 +316,7 @@ if uploaded_file:
                                 name='% Movimiento',
                                 marker_color=colores_mapeados,
                                 text=resumen['% Movimiento'].apply(lambda x: f'{x:.1f}%'),
-                                textposition='outside'
+                                textposition='inside'
                             ),
                             secondary_y=False
                         )
@@ -344,8 +344,8 @@ if uploaded_file:
                             legend=dict(x=0.7, y=1.15, orientation='h')
                         )
                         
-                        fig.update_yaxes(title_text="% Movimiento", secondary_y=False, range=[0, 150], dtick=10)
-                        fig.update_yaxes(title_text="% Movimiento Acumulado", secondary_y=True, range=[0, 150], dtick=10)
+                        fig.update_yaxes(title_text="% Movimiento", secondary_y=False, range=[0, 120], dtick=10)
+                        fig.update_yaxes(title_text="% Movimiento Acumulado", secondary_y=True, range=[0, 120], dtick=10)
                         
                         st.plotly_chart(fig, use_container_width=True)
                         
@@ -358,5 +358,6 @@ if uploaded_file:
                             file_name=f'analisis_abc_{area_seleccionada}.csv',
                             mime='text/csv'
                         )
+
 
 
