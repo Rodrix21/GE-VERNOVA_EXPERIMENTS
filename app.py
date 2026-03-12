@@ -353,29 +353,75 @@ if uploaded_file:
                         
                         st.write("---")
                         import io
+                        import matplotlib.pyplot as plt
+                        import matplotlib.patches as mpatches
+                        import numpy as np
                         from openpyxl import load_workbook
                         from openpyxl.drawing.image import Image as XLImage
 
-# Exportar gráfico como imagen PNG en memoria
-                        img_bytes = fig.to_image(format="png", width=900, height=500, scale=2)
+# --- Recrear el gráfico ABC con matplotlib ---
+                        fig_mpl, ax1 = plt.subplots(figsize=(10, 5))
 
-# Generar Excel
+                        zonas = resumen_final['Zona'].tolist()
+                        porcentajes = resumen_final['% Movimiento'].tolist()
+                        acumulados = resumen_final['% de Movimiento acumulado'].tolist()
+                        colores = ['green' if z == 'A' else 'gold' if z == 'B' else 'red' for z in zonas]
+
+                        x = np.arange(len(zonas))
+                        bars = ax1.bar(x, porcentajes, color=colores, width=0.5, label='% Movimiento')
+
+                        for bar, val in zip(bars, porcentajes):
+                            ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+                                     f'{val:.1f}%', ha='center', va='bottom', fontsize=10)
+
+                        ax1.set_ylim(0, 120)
+                        ax1.set_yticks(range(0, 121, 10))
+                        ax1.set_ylabel('% Movimiento')
+                        ax1.set_xticks(x)
+                        ax1.set_xticklabels(zonas)
+                        ax1.set_xlabel('Zona')
+                        ax1.set_title(f'Análisis ABC - {area_seleccionada}')
+
+                        ax2 = ax1.twinx()
+                        ax2.plot(x, acumulados, color='blue', linewidth=3,
+                                 marker='o', markersize=8, label='% Movimiento Acumulado')
+
+                        for i, val in enumerate(acumulados):
+                            ax2.text(i, val + 2, f'{val:.1f}%', ha='center', va='bottom',
+                                     fontsize=10, color='blue')
+
+                        ax2.set_ylim(0, 120)
+                        ax2.set_yticks(range(0, 121, 10))
+                        ax2.set_ylabel('% Movimiento Acumulado')
+
+# Leyenda combinada
+                        patch1 = mpatches.Patch(color='gray', label='% Movimiento')
+                        from matplotlib.lines import Line2D
+                        line1 = Line2D([0], [0], color='blue', linewidth=2, marker='o', label='% Movimiento Acumulado')
+                        ax1.legend(handles=[patch1, line1], loc='upper right')
+
+                        plt.tight_layout()
+
+# Guardar figura en buffer
+                        img_stream = io.BytesIO()
+                        fig_mpl.savefig(img_stream, format='png', dpi=150, bbox_inches='tight')
+                        img_stream.seek(0)
+                        plt.close(fig_mpl)
+
+# --- Generar Excel ---
                         output = io.BytesIO()
                         with pd.ExcelWriter(output, engine='openpyxl') as writer:
                             df[columnas_proceso].to_excel(writer, sheet_name='Análisis ABC', index=False)
                             resumen_final.to_excel(writer, sheet_name='Resumen ABC', index=False)
 
-# Insertar imagen en hoja Resumen ABC
                         output.seek(0)
                         wb = load_workbook(output)
                         ws = wb['Resumen ABC']
 
-                        img_stream = io.BytesIO(img_bytes)
                         xl_img = XLImage(img_stream)
-                        xl_img.anchor = 'A10'  # Posición debajo del resumen
+                        xl_img.anchor = 'A10'
                         ws.add_image(xl_img)
 
-# Guardar en buffer final
                         final_output = io.BytesIO()
                         wb.save(final_output)
                         excel_data = final_output.getvalue()
@@ -385,10 +431,4 @@ if uploaded_file:
                             data=excel_data,
                             file_name=f'analisis_abc_{area_seleccionada}.xlsx',
                             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                        ) 
-
-
-
-
-
-
+                        )
