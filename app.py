@@ -361,52 +361,71 @@ if uploaded_file:
                         from openpyxl.drawing.image import Image as XLImage
 
 # --- Recrear el gráfico ABC con matplotlib ---
-                        fig_mpl, ax1 = plt.subplots(figsize=(12, 5))
+                        fig_mpl, ax1 = plt.subplots(figsize=(12, 5), facecolor='white')
+                        ax1.set_facecolor('white')
 
                         zonas = resumen_final['Zona'].tolist()
                         porcentajes = resumen_final['% Movimiento'].tolist()
                         acumulados = resumen_final['% de Movimiento acumulado'].tolist()
 
-# Colores idénticos al Plotly
                         colores = ['green' if z == 'A' else 'gold' if z == 'B' else 'red' for z in zonas]
 
                         x = np.arange(len(zonas))
-                        bars = ax1.bar(x, porcentajes, color=colores, width=0.4, label='% Movimiento')
 
-# Etiquetas sobre las barras (igual que textposition='auto')
+# Barras más anchas (igual que Plotly)
+                        bars = ax1.bar(x, porcentajes, color=colores, width=0.6, label='% Movimiento')
+
+# Etiquetas DENTRO de las barras, centradas verticalmente (igual que Plotly)
                         for bar, val in zip(bars, porcentajes):
-                            ax1.text(bar.get_x() + bar.get_width() / 2, bar.get_height() / 2,
-                                     f'{val:.1f}%', ha='center', va='center', fontsize=10, color='white', fontweight='bold')
+                            bar_height = bar.get_height()
+    # Solo pone texto dentro si la barra es suficientemente alta
+                            if bar_height > 8:
+                                ax1.text(bar.get_x() + bar.get_width() / 2, bar_height / 2,
+                                         f'{val:.1f}%', ha='center', va='center',
+                                         fontsize=10, color='white', fontweight='bold')
+                            else:
+                                ax1.text(bar.get_x() + bar.get_width() / 2, bar_height + 1,
+                                         f'{val:.1f}%', ha='center', va='bottom',
+                                         fontsize=10, color='black')
 
-# Eje Y izquierdo (igual que secondary_y=False)
+# Grid gris claro (igual que Plotly)
+                        ax1.yaxis.grid(True, color='lightgrey', linestyle='-', linewidth=0.7)
+                        ax1.set_axisbelow(True)
+                        ax1.spines['top'].set_visible(False)
+                        ax1.spines['right'].set_visible(False)
+                        
                         ax1.set_ylim(0, 120)
                         ax1.set_yticks(range(0, 121, 10))
                         ax1.set_ylabel('% Movimiento')
                         ax1.set_xticks(x)
                         ax1.set_xticklabels(zonas)
                         ax1.set_xlabel('Zona')
-                        ax1.set_title(f'Análisis ABC - {area_seleccionada}', fontsize=13)
+                        ax1.set_title(f'Análisis ABC - {area_seleccionada}', fontsize=13, loc='left', fontweight='bold')
 
-# Eje Y derecho (igual que secondary_y=True)
+# Eje Y derecho
                         ax2 = ax1.twinx()
                         ax2.plot(x, acumulados, color='blue', linewidth=3,
-                                 marker='o', markersize=10, label='% Movimiento Acumulado', zorder=5)
+                                 marker='o', markersize=8, label='% Movimiento Acumulado', zorder=5)
 
-# Etiquetas sobre los puntos (igual que textposition='top center')
+# Etiquetas línea ARRIBA de cada punto (igual que Plotly textposition='top center')
                         for i, val in enumerate(acumulados):
                             ax2.text(i, val + 3, f'{val:.1f}%', ha='center', va='bottom',
                                      fontsize=10, color='blue')
-
+                        
                         ax2.set_ylim(0, 120)
                         ax2.set_yticks(range(0, 121, 10))
                         ax2.set_ylabel('% Movimiento Acumulado')
+                        ax2.spines['top'].set_visible(False)
 
-# Leyenda combinada horizontal en la parte superior (igual que legend=dict(x=0.7, y=1.15, orientation='h'))
-                        patch_bar = mpatches.Patch(color='gray', label='% Movimiento')
-                        line_acum = Line2D([0], [0], color='blue', linewidth=3, marker='o', markersize=8, label='% Movimiento Acumulado')
-                        ax1.legend(handles=[patch_bar, line_acum], loc='upper right',
-                                   bbox_to_anchor=(1.0, 1.15), ncol=2, fontsize=9)
-                            
+# Leyenda horizontal FUERA del gráfico, arriba a la derecha (igual que Plotly)
+                        patch_bar = mpatches.Patch(color='green', label='% Movimiento')
+                        line_acum = Line2D([0], [0], color='blue', linewidth=2,
+                                           marker='o', markersize=7, label='% Movimiento Acumulado')
+                        ax1.legend(handles=[patch_bar, line_acum],
+                                   loc='upper left',
+                                   bbox_to_anchor=(0.65, 1.12),
+                                   ncol=2, fontsize=9, frameon=True)
+                        
                         plt.tight_layout()
 
 # Guardar figura en buffer
@@ -439,6 +458,7 @@ if uploaded_file:
                             file_name=f'analisis_abc_{area_seleccionada}.xlsx',
                             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                         )
+
 
 
 
