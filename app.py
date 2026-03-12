@@ -7,6 +7,7 @@ import io
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
+import matplotlib.lines import Line2D
 
 st.set_page_config(page_title="Análisis ABC Repuestos", layout="wide")
 col_logo, col_titulo = st.columns([1, 4])
@@ -458,6 +459,7 @@ if uploaded_file:
                             file_name=f'analisis_abc_{area_seleccionada}.xlsx',
                             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                         )
+
 
 
 
