@@ -352,12 +352,20 @@ if uploaded_file:
 # Opción de descargar
                         
                         st.write("---")
+                        import io
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                            df[columnas_proceso].to_excel(writer, sheet_name='Análisis ABC', index=False)
+                            resumen_final.to_excel(writer, sheet_name='Resumen ABC', index=False)
+                        excel_data = output.getvalue()
+                        
                         st.download_button(
-                            label="📥 Descargar tabla completa (CSV)",
-                            data=df[columnas_proceso].to_csv(index=False).encode('utf-8'),
-                            file_name=f'analisis_abc_{area_seleccionada}.csv',
-                            mime='text/csv'
+                            label="📥 Descargar tabla completa (Excel)",
+                            data=excel_data,
+                            file_name=f'analisis_abc_{area_seleccionada}.xlsx',
+                            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                         )
+
 
 
 
