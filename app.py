@@ -3,6 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import io
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import numpy as np
 
 st.set_page_config(page_title="Análisis ABC Repuestos", layout="wide")
 col_logo, col_titulo = st.columns([1, 4])
@@ -352,10 +356,7 @@ if uploaded_file:
 # Opción de descargar
                         
                         st.write("---")
-                        import io
-                        import matplotlib.pyplot as plt
-                        import matplotlib.patches as mpatches
-                        import numpy as np
+                       
                         from openpyxl import load_workbook
                         from openpyxl.drawing.image import Image as XLImage
 
@@ -432,3 +433,4 @@ if uploaded_file:
                             file_name=f'analisis_abc_{area_seleccionada}.xlsx',
                             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                         )
+
