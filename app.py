@@ -353,18 +353,40 @@ if uploaded_file:
                         
                         st.write("---")
                         import io
+                        from openpyxl import load_workbook
+                        from openpyxl.drawing.image import Image as XLImage
+
+# Exportar gráfico como imagen PNG en memoria
+                        img_bytes = fig.to_image(format="png", width=900, height=500, scale=2)
+
+# Generar Excel
                         output = io.BytesIO()
                         with pd.ExcelWriter(output, engine='openpyxl') as writer:
                             df[columnas_proceso].to_excel(writer, sheet_name='Análisis ABC', index=False)
                             resumen_final.to_excel(writer, sheet_name='Resumen ABC', index=False)
-                        excel_data = output.getvalue()
-                        
+
+# Insertar imagen en hoja Resumen ABC
+                        output.seek(0)
+                        wb = load_workbook(output)
+                        ws = wb['Resumen ABC']
+
+                        img_stream = io.BytesIO(img_bytes)
+                        xl_img = XLImage(img_stream)
+                        xl_img.anchor = 'A10'  # Posición debajo del resumen
+                        ws.add_image(xl_img)
+
+# Guardar en buffer final
+                        final_output = io.BytesIO()
+                        wb.save(final_output)
+                        excel_data = final_output.getvalue()
+
                         st.download_button(
                             label="📥 Descargar tabla completa (Excel)",
                             data=excel_data,
                             file_name=f'analisis_abc_{area_seleccionada}.xlsx',
                             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                        )
+                        ) 
+
 
 
 
