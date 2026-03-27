@@ -379,7 +379,7 @@ if uploaded_file:
 
 # Etiquetas DENTRO de las barras, centradas verticalmente (igual que Plotly)
                         for bar, val in zip(bars, porcentajes):
-                            bar_height = bar.get_height(
+                            bar_height = bar.get_height()
 # Solo pone texto dentro si la barra es suficientemente alta
                             if bar_height > 8:
                                 ax1.text(bar.get_x() + bar.get_width() / 2, bar_height / 2,
