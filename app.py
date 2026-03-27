@@ -157,6 +157,7 @@ if uploaded_file:
                         df['Ingreso y Salida'] = df['Material'].apply(
                             lambda x: len(mb51[mb51['Material'] == x])
                         )
+                        df=df[df['Ingreso y Salida']>0].copy()
                         
 # Ingresos y Salidas por año (2022 - hasta que el cuerpo aguante)
                         for year in [2022, 2023, 2024, 2025, 2026]:
@@ -378,8 +379,8 @@ if uploaded_file:
 
 # Etiquetas DENTRO de las barras, centradas verticalmente (igual que Plotly)
                         for bar, val in zip(bars, porcentajes):
-                            bar_height = bar.get_height()
-    # Solo pone texto dentro si la barra es suficientemente alta
+                            bar_height = bar.get_height(
+# Solo pone texto dentro si la barra es suficientemente alta
                             if bar_height > 8:
                                 ax1.text(bar.get_x() + bar.get_width() / 2, bar_height / 2,
                                          f'{val:.1f}%', ha='center', va='center',
